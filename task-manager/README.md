@@ -1,11 +1,5 @@
 # Task Manager — Spring Boot REST API + Angular
 
-A small full-stack task management application built to satisfy the **5.0 (Bardzo dobry)** grading criteria:
-a layered Spring Boot REST API with JWT security, validation, error handling, domain events and unit tests,
-plus a simple Angular frontend that consumes the API.
-
----
-
 ## Tech stack
 
 | Layer      | Technology                                              |
@@ -40,7 +34,7 @@ The API starts on **http://localhost:8080**.
 
 On startup the app seeds:
 - a default user — **username:** `admin`, **password:** `admin123`
-- two sample tasks
+- two sample tasks owned by that `admin` user
 
 H2 console (optional, for inspecting data) is available at
 **http://localhost:8080/h2-console** with JDBC URL `jdbc:h2:mem:taskdb`, user `sa`, empty password.
@@ -72,7 +66,8 @@ Log in with `admin` / `admin123`, or register a new account.
 
 ## API reference
 
-All `/api/tasks` endpoints require a `Authorization: Bearer <token>` header.
+All `/api/tasks` endpoints require an `Authorization: Bearer <token>` header and operate
+only on the authenticated user's own tasks.
 
 ### Auth (public)
 
@@ -87,7 +82,7 @@ Response: `{ "token": "...", "username": "..." }`
 
 | Method | Path              | Body          | Description           |
 |--------|-------------------|---------------|-----------------------|
-| GET    | `/api/tasks`      | —             | List all tasks        |
+| GET    | `/api/tasks`      | —             | List your tasks       |
 | GET    | `/api/tasks/{id}` | —             | Get one task          |
 | POST   | `/api/tasks`      | `TaskRequest` | Create a task (201)   |
 | PUT    | `/api/tasks/{id}` | `TaskRequest` | Update a task         |
@@ -153,16 +148,4 @@ task-manager/
         ├── interceptors/      auth.interceptor (attaches JWT)
         ├── guards/            auth.guard
         └── models/            task.model
-```
-
----
-
-## Design choices & notes
-
-- **H2 in-memory** keeps setup to zero for grading; data resets on restart. To use PostgreSQL,
-  swap the `spring.datasource.*` properties in `application.yml` and add the Postgres driver to `pom.xml`.
-- **JWT secret** lives in `application.yml` for convenience. In a real deployment, override it via the
-  `APP_JWT_SECRET` environment variable and never commit a production secret.
-- The frontend stores the JWT in `localStorage` and attaches it through an HTTP interceptor.
-- This is intentionally the **minimum scope** for a 5.0 grade — one entity, lean but complete.
 ```

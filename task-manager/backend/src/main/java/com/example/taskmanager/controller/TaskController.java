@@ -6,6 +6,7 @@ import com.example.taskmanager.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,34 +30,34 @@ public class TaskController
         }
 
         @GetMapping
-        public List<TaskResponse> getAll()
+        public List<TaskResponse> getAll(Authentication authentication)
         {
-                return taskService.getAllTasks();
+                return taskService.getAllTasks(authentication.getName());
         }
 
         @GetMapping("/{id}")
-        public TaskResponse getById(@PathVariable Long id)
+        public TaskResponse getById(@PathVariable Long id, Authentication authentication)
         {
-                return taskService.getTaskById(id);
+                return taskService.getTaskById(id, authentication.getName());
         }
 
         @PostMapping
-        public ResponseEntity<TaskResponse> create(@Valid @RequestBody TaskRequest request)
+        public ResponseEntity<TaskResponse> create(@Valid @RequestBody TaskRequest request, Authentication authentication)
         {
-                TaskResponse created = taskService.createTask(request);
+                TaskResponse created = taskService.createTask(request, authentication.getName());
                 return ResponseEntity.status(HttpStatus.CREATED).body(created);
         }
 
         @PutMapping("/{id}")
-        public TaskResponse update(@PathVariable Long id, @Valid @RequestBody TaskRequest request)
+        public TaskResponse update(@PathVariable Long id, @Valid @RequestBody TaskRequest request, Authentication authentication)
         {
-                return taskService.updateTask(id, request);
+                return taskService.updateTask(id, request, authentication.getName());
         }
 
         @DeleteMapping("/{id}")
-        public ResponseEntity<Void> delete(@PathVariable Long id)
+        public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication)
         {
-                taskService.deleteTask(id);
+                taskService.deleteTask(id, authentication.getName());
                 return ResponseEntity.noContent().build();
         }
 }

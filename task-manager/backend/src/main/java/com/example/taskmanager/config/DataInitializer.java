@@ -33,11 +33,8 @@ public class DataInitializer implements CommandLineRunner
         @Override
         public void run(String... args)
         {
-                if (!userRepository.existsByUsername("admin"))
-                {
-                        userRepository.save(new AppUser("admin", passwordEncoder.encode("admin123"), Role.ADMIN));
-                        LOG.info("Seeded default user 'admin' (password: 'admin123')");
-                }
+                AppUser admin = userRepository.findByUsername("admin")
+                                .orElseGet(this::createAdmin);
 
                 if (taskRepository.count() == 0)
                 {
@@ -45,15 +42,25 @@ public class DataInitializer implements CommandLineRunner
                         first.setTitle("Read the README");
                         first.setDescription("Get the project up and running");
                         first.setStatus(TaskStatus.TODO);
+                        first.setOwner(admin);
 
                         Task second = new Task();
                         second.setTitle("Record the demo video");
                         second.setDescription("2-3 minutes showing the app in action");
                         second.setStatus(TaskStatus.IN_PROGRESS);
+                        second.setOwner(admin);
 
                         taskRepository.save(first);
                         taskRepository.save(second);
-                        LOG.info("Seeded {} sample tasks", taskRepository.count());
+                        LOG.info("Seeded {} sample tasks for user 'admin'", taskRepository.count());
                 }
+        }
+
+        private AppUser createAdmin()
+        {
+                AppUser admin = userRepository.save(
+                                new AppUser("admin", passwordEncoder.encode("admin123"), Role.ADMIN));
+                LOG.info("Seeded default user 'admin' (password: 'admin123')");
+                return admin;
         }
 }

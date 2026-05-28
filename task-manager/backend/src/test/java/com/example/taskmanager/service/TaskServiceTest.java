@@ -1,5 +1,7 @@
 package com.example.taskmanager.service;
 
+import com.example.taskmanager.domain.AppUser;
+import com.example.taskmanager.domain.Role;
 import com.example.taskmanager.domain.Task;
 import com.example.taskmanager.domain.TaskStatus;
 import com.example.taskmanager.dto.TaskRequest;
@@ -9,6 +11,8 @@ import com.example.taskmanager.event.TaskCreatedEvent;
 import com.example.taskmanager.exception.ResourceNotFoundException;
 import com.example.taskmanager.mapper.TaskMapper;
 import com.example.taskmanager.repository.TaskRepository;
+import com.example.taskmanager.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,8 +36,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest
 {
+        private static final String USERNAME = "alice";
+
         @Mock
         private TaskRepository taskRepository;
+
+        @Mock
+        private UserRepository userRepository;
 
         @Mock
         private ApplicationEventPublisher eventPublisher;
@@ -44,8 +53,17 @@ class TaskServiceTest
         @InjectMocks
         private TaskService taskService;
 
+        private AppUser owner;
+
+        @BeforeEach
+        void setUp()
+        {
+                owner = new AppUser(USERNAME, "encoded-password", Role.USER);
+                when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(owner));
+        }
+
         @Test
-        void createTask_persistsAndPublishesCreatedEvent()
+        void createTask_persistsWithOwnerAndPublishesCreatedEvent()
         {
                 TaskRequest request = new TaskRequest("Write tests", "JUnit + Mockito", TaskStatus.TODO);
                 when(taskRepository.save(any(Task.class))).thenAnswer(invocation ->
@@ -55,11 +73,16 @@ class TaskServiceTest
                         return task;
                 });
 
-                TaskResponse response = taskService.createTask(request);
+                TaskResponse response = taskService.createTask(request, USERNAME);
 
                 assertThat(response.id()).isEqualTo(1L);
                 assertThat(response.title()).isEqualTo("Write tests");
                 assertThat(response.status()).isEqualTo(TaskStatus.TODO);
+
+                ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+                verify(taskRepository).save(captor.capture());
+                assertThat(captor.getValue().getOwner()).isSameAs(owner);
+
                 verify(eventPublisher, times(1)).publishEvent(any(TaskCreatedEvent.class));
                 verify(eventPublisher, never()).publishEvent(any(TaskCompletedEvent.class));
         }
@@ -75,7 +98,7 @@ class TaskServiceTest
                         return task;
                 });
 
-                TaskResponse response = taskService.createTask(request);
+                TaskResponse response = taskService.createTask(request, USERNAME);
 
                 assertThat(response.completedAt()).isNotNull();
                 verify(eventPublisher).publishEvent(any(TaskCreatedEvent.class));
@@ -83,49 +106,50 @@ class TaskServiceTest
         }
 
         @Test
-        void getTaskById_existing_returnsTask()
+        void getTaskById_owned_returnsTask()
         {
                 Task task = sampleTask(5L, "Existing", TaskStatus.IN_PROGRESS);
-                when(taskRepository.findById(5L)).thenReturn(Optional.of(task));
+                when(taskRepository.findByIdAndOwner(5L, owner)).thenReturn(Optional.of(task));
 
-                TaskResponse response = taskService.getTaskById(5L);
+                TaskResponse response = taskService.getTaskById(5L, USERNAME);
 
                 assertThat(response.id()).isEqualTo(5L);
                 assertThat(response.title()).isEqualTo("Existing");
         }
 
         @Test
-        void getTaskById_missing_throwsNotFound()
+        void getTaskById_notOwnedOrMissing_throwsNotFound()
         {
-                when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+                when(taskRepository.findByIdAndOwner(99L, owner)).thenReturn(Optional.empty());
 
-                assertThatThrownBy(() -> taskService.getTaskById(99L))
+                assertThatThrownBy(() -> taskService.getTaskById(99L, USERNAME))
                                 .isInstanceOf(ResourceNotFoundException.class)
                                 .hasMessageContaining("99");
         }
 
         @Test
-        void getAllTasks_returnsMappedList()
+        void getAllTasks_returnsOnlyOwnerTasks()
         {
-                when(taskRepository.findAll()).thenReturn(List.of(
+                when(taskRepository.findByOwner(owner)).thenReturn(List.of(
                                 sampleTask(1L, "A", TaskStatus.TODO),
                                 sampleTask(2L, "B", TaskStatus.DONE)));
 
-                List<TaskResponse> result = taskService.getAllTasks();
+                List<TaskResponse> result = taskService.getAllTasks(USERNAME);
 
                 assertThat(result).hasSize(2);
                 assertThat(result).extracting(TaskResponse::title).containsExactly("A", "B");
+                verify(taskRepository).findByOwner(owner);
         }
 
         @Test
         void updateTask_transitionToDone_publishesCompletedEventOnce()
         {
                 Task existing = sampleTask(7L, "Old", TaskStatus.TODO);
-                when(taskRepository.findById(7L)).thenReturn(Optional.of(existing));
+                when(taskRepository.findByIdAndOwner(7L, owner)).thenReturn(Optional.of(existing));
                 when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
                 TaskRequest request = new TaskRequest("New title", "Updated", TaskStatus.DONE);
-                TaskResponse response = taskService.updateTask(7L, request);
+                TaskResponse response = taskService.updateTask(7L, request, USERNAME);
 
                 assertThat(response.title()).isEqualTo("New title");
                 assertThat(response.status()).isEqualTo(TaskStatus.DONE);
@@ -137,22 +161,22 @@ class TaskServiceTest
         }
 
         @Test
-        void deleteTask_existing_deletes()
+        void deleteTask_owned_deletes()
         {
                 Task existing = sampleTask(3L, "ToDelete", TaskStatus.TODO);
-                when(taskRepository.findById(3L)).thenReturn(Optional.of(existing));
+                when(taskRepository.findByIdAndOwner(3L, owner)).thenReturn(Optional.of(existing));
 
-                taskService.deleteTask(3L);
+                taskService.deleteTask(3L, USERNAME);
 
                 verify(taskRepository).delete(existing);
         }
 
         @Test
-        void deleteTask_missing_throwsNotFound()
+        void deleteTask_notOwnedOrMissing_throwsNotFound()
         {
-                when(taskRepository.findById(404L)).thenReturn(Optional.empty());
+                when(taskRepository.findByIdAndOwner(404L, owner)).thenReturn(Optional.empty());
 
-                assertThatThrownBy(() -> taskService.deleteTask(404L))
+                assertThatThrownBy(() -> taskService.deleteTask(404L, USERNAME))
                                 .isInstanceOf(ResourceNotFoundException.class);
                 verify(taskRepository, never()).delete(any());
         }
@@ -163,6 +187,7 @@ class TaskServiceTest
                 task.setId(id);
                 task.setTitle(title);
                 task.setStatus(status);
+                task.setOwner(owner);
                 return task;
         }
 }
