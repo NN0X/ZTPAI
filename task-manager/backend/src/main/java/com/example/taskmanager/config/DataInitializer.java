@@ -12,48 +12,48 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Seeds a default user and a couple of sample tasks on startup so the
- * application is usable immediately after launch.
- */
 @Component
-public class DataInitializer implements CommandLineRunner {
+public class DataInitializer implements CommandLineRunner
+{
+        private static final Logger LOG = LoggerFactory.getLogger(DataInitializer.class);
 
-    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+        private final UserRepository userRepository;
+        private final TaskRepository taskRepository;
+        private final PasswordEncoder passwordEncoder;
 
-    private final UserRepository userRepository;
-    private final TaskRepository taskRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    public DataInitializer(UserRepository userRepository,
-                           TaskRepository taskRepository,
-                           PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.taskRepository = taskRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @Override
-    public void run(String... args) {
-        if (!userRepository.existsByUsername("admin")) {
-            userRepository.save(new AppUser("admin", passwordEncoder.encode("admin123"), Role.ADMIN));
-            log.info("Seeded default user 'admin' (password: 'admin123')");
+        public DataInitializer(UserRepository userRepository,
+                        TaskRepository taskRepository,
+                        PasswordEncoder passwordEncoder)
+        {
+                this.userRepository = userRepository;
+                this.taskRepository = taskRepository;
+                this.passwordEncoder = passwordEncoder;
         }
 
-        if (taskRepository.count() == 0) {
-            Task first = new Task();
-            first.setTitle("Read the README");
-            first.setDescription("Get the project up and running");
-            first.setStatus(TaskStatus.TODO);
+        @Override
+        public void run(String... args)
+        {
+                if (!userRepository.existsByUsername("admin"))
+                {
+                        userRepository.save(new AppUser("admin", passwordEncoder.encode("admin123"), Role.ADMIN));
+                        LOG.info("Seeded default user 'admin' (password: 'admin123')");
+                }
 
-            Task second = new Task();
-            second.setTitle("Record the demo video");
-            second.setDescription("2-3 minutes showing the app in action");
-            second.setStatus(TaskStatus.IN_PROGRESS);
+                if (taskRepository.count() == 0)
+                {
+                        Task first = new Task();
+                        first.setTitle("Read the README");
+                        first.setDescription("Get the project up and running");
+                        first.setStatus(TaskStatus.TODO);
 
-            taskRepository.save(first);
-            taskRepository.save(second);
-            log.info("Seeded {} sample tasks", taskRepository.count());
+                        Task second = new Task();
+                        second.setTitle("Record the demo video");
+                        second.setDescription("2-3 minutes showing the app in action");
+                        second.setStatus(TaskStatus.IN_PROGRESS);
+
+                        taskRepository.save(first);
+                        taskRepository.save(second);
+                        LOG.info("Seeded {} sample tasks", taskRepository.count());
+                }
         }
-    }
 }

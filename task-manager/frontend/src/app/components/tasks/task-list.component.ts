@@ -207,114 +207,133 @@ import { Task, TaskRequest, TaskStatus } from '../../models/task.model';
     .error { color: var(--danger); font-size: 0.85rem; margin: 8px 0 0; }
   `]
 })
-export class TaskListComponent implements OnInit {
+export class TaskListComponent implements OnInit
+{
+        tasks: Task[] = [];
+        loading = false;
+        loadError = '';
+        createError = '';
 
-  tasks: Task[] = [];
-  loading = false;
-  loadError = '';
-  createError = '';
+        readonly statuses: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE'];
 
-  readonly statuses: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE'];
+        draft: TaskRequest = { title: '', description: '', status: 'TODO' };
 
-  draft: TaskRequest = { title: '', description: '', status: 'TODO' };
+        editingId: number | null = null;
+        editModel: TaskRequest = { title: '', description: '', status: 'TODO' };
 
-  editingId: number | null = null;
-  editModel: TaskRequest = { title: '', description: '', status: 'TODO' };
+        constructor(private taskService: TaskService) {}
 
-  constructor(private taskService: TaskService) {}
+        ngOnInit(): void
+        {
+                this.load();
+        }
 
-  ngOnInit(): void {
-    this.load();
-  }
+        load(): void
+        {
+                this.loading = true;
+                this.loadError = '';
+                this.taskService.getAll().subscribe({
+                        next: (tasks) =>
+                        {
+                                this.tasks = tasks;
+                                this.loading = false;
+                        },
+                        error: () =>
+                        {
+                                this.loadError = 'Could not load tasks. Is the backend running?';
+                                this.loading = false;
+                        }
+                });
+        }
 
-  load(): void {
-    this.loading = true;
-    this.loadError = '';
-    this.taskService.getAll().subscribe({
-      next: (tasks) => {
-        this.tasks = tasks;
-        this.loading = false;
-      },
-      error: () => {
-        this.loadError = 'Could not load tasks. Is the backend running?';
-        this.loading = false;
-      }
-    });
-  }
+        create(): void
+        {
+                if (!this.draft.title.trim())
+                {
+                        return;
+                }
+                this.createError = '';
+                this.taskService.create(this.draft).subscribe({
+                        next: (task) =>
+                        {
+                                this.tasks = [...this.tasks, task];
+                                this.draft = { title: '', description: '', status: 'TODO' };
+                        },
+                        error: (err) =>
+                        {
+                                this.createError = err?.error?.message || 'Could not create the task.';
+                        }
+                });
+        }
 
-  create(): void {
-    if (!this.draft.title.trim()) {
-      return;
-    }
-    this.createError = '';
-    this.taskService.create(this.draft).subscribe({
-      next: (task) => {
-        this.tasks = [...this.tasks, task];
-        this.draft = { title: '', description: '', status: 'TODO' };
-      },
-      error: (err) => {
-        this.createError = err?.error?.message || 'Could not create the task.';
-      }
-    });
-  }
+        changeStatus(task: Task, status: TaskStatus): void
+        {
+                const request: TaskRequest = {
+                        title: task.title,
+                        description: task.description,
+                        status
+                };
+                this.taskService.update(task.id, request).subscribe({
+                        next: (updated) => this.replace(updated),
+                        error: () => this.load()
+                });
+        }
 
-  changeStatus(task: Task, status: TaskStatus): void {
-    const request: TaskRequest = {
-      title: task.title,
-      description: task.description,
-      status
-    };
-    this.taskService.update(task.id, request).subscribe({
-      next: (updated) => this.replace(updated),
-      error: () => this.load()
-    });
-  }
+        startEdit(task: Task): void
+        {
+                this.editingId = task.id;
+                this.editModel = {
+                        title: task.title,
+                        description: task.description ?? '',
+                        status: task.status
+                };
+        }
 
-  startEdit(task: Task): void {
-    this.editingId = task.id;
-    this.editModel = {
-      title: task.title,
-      description: task.description ?? '',
-      status: task.status
-    };
-  }
+        cancelEdit(): void
+        {
+                this.editingId = null;
+        }
 
-  cancelEdit(): void {
-    this.editingId = null;
-  }
+        saveEdit(task: Task): void
+        {
+                this.taskService.update(task.id, this.editModel).subscribe({
+                        next: (updated) =>
+                        {
+                                this.replace(updated);
+                                this.editingId = null;
+                        },
+                        error: () => this.load()
+                });
+        }
 
-  saveEdit(task: Task): void {
-    this.taskService.update(task.id, this.editModel).subscribe({
-      next: (updated) => {
-        this.replace(updated);
-        this.editingId = null;
-      },
-      error: () => this.load()
-    });
-  }
+        remove(task: Task): void
+        {
+                this.taskService.delete(task.id).subscribe({
+                        next: () =>
+                        {
+                                this.tasks = this.tasks.filter((t) => t.id !== task.id);
+                        },
+                        error: () => this.load()
+                });
+        }
 
-  remove(task: Task): void {
-    this.taskService.delete(task.id).subscribe({
-      next: () => {
-        this.tasks = this.tasks.filter((t) => t.id !== task.id);
-      },
-      error: () => this.load()
-    });
-  }
+        label(status: TaskStatus): string
+        {
+                switch (status)
+                {
+                        case 'TODO': return 'To do';
+                        case 'IN_PROGRESS': return 'In progress';
+                        case 'DONE': return 'Done';
+                }
+        }
 
-  label(status: TaskStatus): string {
-    switch (status) {
-      case 'TODO': return 'To do';
-      case 'IN_PROGRESS': return 'In progress';
-      case 'DONE': return 'Done';
-    }
-  }
+        asStatus(value: string): TaskStatus
+        {
+                return value as TaskStatus;
+        }
 
-  asStatus(value: string): TaskStatus {
-    return value as TaskStatus;
-  }
-
-  private replace(updated: Task): void {
-    this.tasks = this.tasks.map((t) => (t.id === updated.id ? updated : t));
-  }
+        private replace(updated: Task): void
+        {
+                this.tasks = this.tasks.map((t) => (t.id === updated.id ? updated : t));
+        }
 }

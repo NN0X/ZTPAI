@@ -16,7 +16,7 @@ import { AuthService } from '../../services/auth.service';
       <div class="field">
         <label for="username">Username</label>
         <input id="username" type="text" [(ngModel)]="username" autocomplete="username"
-               (keyup.enter)="submit()" placeholder="admin" />
+               (keyup.enter)="submit()" />
       </div>
 
       <div class="field">
@@ -37,10 +37,6 @@ import { AuthService } from '../../services/auth.service';
         {{ mode === 'login' ? "No account yet?" : 'Already have an account?' }}
         <a (click)="toggleMode()">{{ mode === 'login' ? 'Register' : 'Sign in' }}</a>
       </p>
-
-      @if (mode === 'login') {
-        <p class="hint">Demo: <code>admin</code> / <code>admin123</code></p>
-      }
     </div>
   `,
   styles: [`
@@ -124,57 +120,50 @@ import { AuthService } from '../../services/auth.service';
       cursor: pointer;
       font-weight: 600;
     }
-    .hint {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      margin: 14px 0 0;
-    }
-    code {
-      background: var(--surface-2);
-      padding: 1px 6px;
-      border-radius: 4px;
-      color: var(--text);
-    }
   `]
 })
-export class LoginComponent {
+export class LoginComponent
+{
+        username = '';
+        password = '';
+        error = '';
+        loading = false;
+        mode: 'login' | 'register' = 'login';
 
-  username = '';
-  password = '';
-  error = '';
-  loading = false;
-  mode: 'login' | 'register' = 'login';
+        constructor(private auth: AuthService, private router: Router) {}
 
-  constructor(private auth: AuthService, private router: Router) {}
+        toggleMode(): void
+        {
+                this.mode = this.mode === 'login' ? 'register' : 'login';
+                this.error = '';
+        }
 
-  toggleMode(): void {
-    this.mode = this.mode === 'login' ? 'register' : 'login';
-    this.error = '';
-  }
+        submit(): void
+        {
+                if (!this.username || !this.password)
+                {
+                        this.error = 'Please enter a username and password.';
+                        return;
+                }
 
-  submit(): void {
-    if (!this.username || !this.password) {
-      this.error = 'Please enter a username and password.';
-      return;
-    }
+                this.error = '';
+                this.loading = true;
 
-    this.error = '';
-    this.loading = true;
+                const request$ = this.mode === 'login'
+                        ? this.auth.login(this.username, this.password)
+                        : this.auth.register(this.username, this.password);
 
-    const request$ = this.mode === 'login'
-      ? this.auth.login(this.username, this.password)
-      : this.auth.register(this.username, this.password);
-
-    request$.subscribe({
-      next: () => {
-        this.loading = false;
-        this.router.navigate(['/tasks']);
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = err?.error?.message || 'Authentication failed. Please try again.';
-      }
-    });
-  }
+                request$.subscribe({
+                        next: () =>
+                        {
+                                this.loading = false;
+                                this.router.navigate(['/tasks']);
+                        },
+                        error: (err) =>
+                        {
+                                this.loading = false;
+                                this.error = err?.error?.message || 'Authentication failed. Please try again.';
+                        }
+                });
+        }
 }
