@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: task-manager
+
+  datasource:
+    url: jdbc:h2:mem:taskdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  port: 8080
+
+# Application-specific settings.
+# In production, override app.jwt.secret via an environment variable
+# (e.g. APP_JWT_SECRET) and never commit the real secret.
+app:
+  jwt:
+    secret: "ZmFrZS1kZXYtb25seS1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tMTIzNDU2Nzg5MA=="
+    expiration-ms: 3600000
+
+logging:
+  level:
+    com.example.taskmanager: INFO

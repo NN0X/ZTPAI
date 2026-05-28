@@ -1,0 +1,47 @@
+:root {
+  --bg: #14110f;
+  --surface: #1d1916;
+  --surface-2: #261f1a;
+  --border: #3a322b;
+  --text: #f3ece3;
+  --text-muted: #a99f93;
+  --accent: #e0a93b;
+  --accent-soft: rgba(224, 169, 59, 0.14);
+  --danger: #d6694f;
+  --todo: #8a8276;
+  --progress: #4f9bd6;
+  --done: #6fbf73;
+  --radius: 12px;
+  --font-body: 'Manrope', sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(224, 169, 59, 0.08), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+}

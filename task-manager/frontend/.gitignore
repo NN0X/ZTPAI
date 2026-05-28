@@ -1,0 +1,15 @@
+# Dependencies & build output
+/node_modules
+/dist
+/.angular
+/out-tsc
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs / OS
+npm-debug.log*
+*.log
+.DS_Store
