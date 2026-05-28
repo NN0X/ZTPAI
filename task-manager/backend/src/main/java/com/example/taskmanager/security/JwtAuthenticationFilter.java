@@ -14,53 +14,55 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Reads the Authorization header, validates the JWT and populates the
- * security context for the duration of the request.
- */
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter
+{
+        private static final String BEARER_PREFIX = "Bearer ";
 
-    private static final String BEARER_PREFIX = "Bearer ";
+        private final JwtService jwtService;
+        private final AppUserDetailsService userDetailsService;
 
-    private final JwtService jwtService;
-    private final AppUserDetailsService userDetailsService;
-
-    public JwtAuthenticationFilter(JwtService jwtService, AppUserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
-    }
-
-    @Override
-    protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
-
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            filterChain.doFilter(request, response);
-            return;
+        public JwtAuthenticationFilter(JwtService jwtService, AppUserDetailsService userDetailsService)
+        {
+                this.jwtService = jwtService;
+                this.userDetailsService = userDetailsService;
         }
 
-        String token = authHeader.substring(BEARER_PREFIX.length());
-        try {
-            String username = jwtService.extractUsername(token);
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (jwtService.isTokenValid(token, userDetails.getUsername())) {
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+        @Override
+        protected void doFilterInternal(
+                        @NonNull HttpServletRequest request,
+                        @NonNull HttpServletResponse response,
+                        @NonNull FilterChain filterChain) throws ServletException, IOException
+        {
+                String authHeader = request.getHeader("Authorization");
+                if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX))
+                {
+                        filterChain.doFilter(request, response);
+                        return;
                 }
-            }
-        } catch (Exception ex) {
-            // Invalid or expired token: leave the context unauthenticated.
-            SecurityContextHolder.clearContext();
-        }
 
-        filterChain.doFilter(request, response);
-    }
+                String token = authHeader.substring(BEARER_PREFIX.length());
+                try
+                {
+                        String username = jwtService.extractUsername(token);
+                        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null)
+                        {
+                                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                                if (jwtService.isTokenValid(token, userDetails.getUsername()))
+                                {
+                                        UsernamePasswordAuthenticationToken authentication =
+                                                        new UsernamePasswordAuthenticationToken(
+                                                                        userDetails, null, userDetails.getAuthorities());
+                                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                                }
+                        }
+                }
+                catch (Exception ex)
+                {
+                        SecurityContextHolder.clearContext();
+                }
+
+                filterChain.doFilter(request, response);
+        }
 }

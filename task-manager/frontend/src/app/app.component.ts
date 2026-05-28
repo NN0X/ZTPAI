@@ -86,12 +86,13 @@ import { AuthService } from './services/auth.service';
     }
   `]
 })
-export class AppComponent {
+export class AppComponent
+{
+        constructor(public auth: AuthService, private router: Router) {}
 
-  constructor(public auth: AuthService, private router: Router) {}
-
-  logout(): void {
-    this.auth.logout();
-    this.router.navigate(['/login']);
-  }
+        logout(): void
+        {
+                this.auth.logout();
+                this.router.navigate(['/login']);
+        }
 }

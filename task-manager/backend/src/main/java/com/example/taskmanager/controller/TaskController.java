@@ -17,43 +17,46 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * REST endpoints for managing tasks. All endpoints require authentication.
- */
 @RestController
 @RequestMapping("/api/tasks")
-public class TaskController {
+public class TaskController
+{
+        private final TaskService taskService;
 
-    private final TaskService taskService;
+        public TaskController(TaskService taskService)
+        {
+                this.taskService = taskService;
+        }
 
-    public TaskController(TaskService taskService) {
-        this.taskService = taskService;
-    }
+        @GetMapping
+        public List<TaskResponse> getAll()
+        {
+                return taskService.getAllTasks();
+        }
 
-    @GetMapping
-    public List<TaskResponse> getAll() {
-        return taskService.getAllTasks();
-    }
+        @GetMapping("/{id}")
+        public TaskResponse getById(@PathVariable Long id)
+        {
+                return taskService.getTaskById(id);
+        }
 
-    @GetMapping("/{id}")
-    public TaskResponse getById(@PathVariable Long id) {
-        return taskService.getTaskById(id);
-    }
+        @PostMapping
+        public ResponseEntity<TaskResponse> create(@Valid @RequestBody TaskRequest request)
+        {
+                TaskResponse created = taskService.createTask(request);
+                return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        }
 
-    @PostMapping
-    public ResponseEntity<TaskResponse> create(@Valid @RequestBody TaskRequest request) {
-        TaskResponse created = taskService.createTask(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
+        @PutMapping("/{id}")
+        public TaskResponse update(@PathVariable Long id, @Valid @RequestBody TaskRequest request)
+        {
+                return taskService.updateTask(id, request);
+        }
 
-    @PutMapping("/{id}")
-    public TaskResponse update(@PathVariable Long id, @Valid @RequestBody TaskRequest request) {
-        return taskService.updateTask(id, request);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        taskService.deleteTask(id);
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> delete(@PathVariable Long id)
+        {
+                taskService.deleteTask(id);
+                return ResponseEntity.noContent().build();
+        }
 }

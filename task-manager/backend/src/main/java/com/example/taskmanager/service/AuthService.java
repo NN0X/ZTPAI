@@ -13,49 +13,49 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Handles user registration and credential-based authentication,
- * issuing JWTs on success.
- */
 @Service
-public class AuthService {
+public class AuthService
+{
+        private final UserRepository userRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final AuthenticationManager authenticationManager;
+        private final JwtService jwtService;
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
-
-    public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager,
-                       JwtService jwtService) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-    }
-
-    @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("Username is already taken");
+        public AuthService(UserRepository userRepository,
+                        PasswordEncoder passwordEncoder,
+                        AuthenticationManager authenticationManager,
+                        JwtService jwtService)
+        {
+                this.userRepository = userRepository;
+                this.passwordEncoder = passwordEncoder;
+                this.authenticationManager = authenticationManager;
+                this.jwtService = jwtService;
         }
 
-        AppUser user = new AppUser(
-                request.username(),
-                passwordEncoder.encode(request.password()),
-                Role.USER);
-        userRepository.save(user);
+        @Transactional
+        public AuthResponse register(RegisterRequest request)
+        {
+                if (userRepository.existsByUsername(request.username()))
+                {
+                        throw new IllegalArgumentException("Username is already taken");
+                }
 
-        String token = jwtService.generateToken(user.getUsername());
-        return new AuthResponse(token, user.getUsername());
-    }
+                AppUser user = new AppUser(
+                                request.username(),
+                                passwordEncoder.encode(request.password()),
+                                Role.USER);
+                userRepository.save(user);
 
-    public AuthResponse login(AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+                String token = jwtService.generateToken(user.getUsername());
+                return new AuthResponse(token, user.getUsername());
+        }
 
-        String token = jwtService.generateToken(request.username());
-        return new AuthResponse(token, request.username());
-    }
+        public AuthResponse login(AuthRequest request)
+        {
+                authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+
+                String token = jwtService.generateToken(request.username());
+                return new AuthResponse(token, request.username());
+        }
 }
